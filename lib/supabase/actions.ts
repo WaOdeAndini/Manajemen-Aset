@@ -32,8 +32,6 @@ export async function login(
     return { error: error.message };
   }
 
-  // Kalau tidak ada tujuan spesifik (user datang langsung ke /login), arahkan
-  // sesuai peran supaya tidak perlu bouncing dua kali lewat layout guard.
   if (redirectTo === "/dashboard" && authData.user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -53,11 +51,7 @@ export async function signOut() {
   redirect("/login");
 }
 
-/**
- * Contoh nyata aksi tulis (mutasi) ke Supabase dari dashboard. Ikuti pola
- * yang sama (Server Action + revalidatePath) untuk membuat aksi tambah/edit
- * aset lainnya.
- */
+
 export async function deleteAset(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
 
@@ -70,4 +64,80 @@ export async function deleteAset(id: string): Promise<{ error?: string }> {
   revalidatePath("/dashboard/aset");
   revalidatePath("/dashboard");
   return {};
+}
+// -----------------------------------------------------------------------
+// TAMBAH / EDIT ASET
+// -----------------------------------------------------------------------
+export interface AsetFormState {
+  error?: string;
+  success?: string;
+}
+
+export async function simpanAset(
+  _prevState: AsetFormState,
+  formData: FormData
+): Promise<AsetFormState> {
+  const supabase = await createClient();
+
+  const id              = String(formData.get("id")                ?? "").trim();
+  const kode            = String(formData.get("kode")              ?? "").trim();
+  const nama            = String(formData.get("nama")              ?? "").trim();
+  const kategoriId      = String(formData.get("kategori_id")       ?? "").trim() || null;
+  const lokasiId        = String(formData.get("lokasi_id")         ?? "").trim() || null;
+  const unitKerja       = String(formData.get("unit_kerja")        ?? "").trim() || null;
+  const tglPerolehan    = String(formData.get("tanggal_perolehan") ?? "").trim();
+  const nilaiRaw        = String(formData.get("nilai_perolehan")   ?? "").trim();
+  const kondisi         = String(formData.get("kondisi")           ?? "").trim();
+  const status          = String(formData.get("status")            ?? "").trim();
+  const penanggungJawab = String(formData.get("penanggung_jawab")  ?? "").trim() || null;
+  const catatan         = String(formData.get("catatan")           ?? "").trim() || null;
+
+  if (!kode)         return { error: "Kode aset wajib diisi." };
+  if (!nama)         return { error: "Nama aset wajib diisi." };
+  if (!tglPerolehan) return { error: "Tanggal perolehan wajib diisi." };
+
+  const nilaiPerolehan = Number(nilaiRaw.replace(/\D/g, ""));
+  if (isNaN(nilaiPerolehan) || nilaiPerolehan < 0) {
+    return { error: "Nilai perolehan tidak valid." };
+  }
+
+  const kondisiValue = (
+    ["Baik", "Perlu Pemeliharaan", "Rusak"].includes(kondisi) ? kondisi : "Baik"
+  ) as "Baik" | "Perlu Pemeliharaan" | "Rusak";
+
+  const statusValue = (
+    ["Digunakan", "Disimpan", "Dipinjamkan", "Dihapuskan"].includes(status) ? status : "Digunakan"
+  ) as "Digunakan" | "Disimpan" | "Dipinjamkan" | "Dihapuskan";
+
+  const payload = {
+    kode,
+    nama,
+    kategori_id:       kategoriId,
+    lokasi_id:         lokasiId,
+    unit_kerja:        unitKerja,
+    tanggal_perolehan: tglPerolehan,
+    nilai_perolehan:   nilaiPerolehan,
+    kondisi:           kondisiValue,
+    status:            statusValue,
+    penanggung_jawab:  penanggungJawab,
+    catatan,
+  };
+
+  if (id) {
+    const { error } = await supabase.from("aset").update(payload).eq("id", id);
+    if (error) {
+      if (error.code === "23505") return { error: "Kode aset ini sudah digunakan aset lain." };
+      return { error: error.message };
+    }
+  } else {
+    const { error } = await supabase.from("aset").insert(payload);
+    if (error) {
+      if (error.code === "23505") return { error: "Kode aset ini sudah digunakan aset lain." };
+      return { error: error.message };
+    }
+  }
+
+  revalidatePath("/dashboard/aset");
+  revalidatePath("/dashboard");
+  return { success: id ? "Aset berhasil diperbarui." : "Aset berhasil ditambahkan." };
 }

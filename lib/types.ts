@@ -9,18 +9,21 @@ import type {
 
 export type { KondisiAset, StatusAset, TipeAktivitas, PeranPengguna, TipePengajuan, StatusPengajuan };
 
-export interface Aset {
+export interface Aset { //ini yg diedit
   id: string;
   kode: string;
   nama: string;
   kategori: string;
+  kategoriId: string | null;
   lokasi: string;
+  lokasiId: string | null;
   unitKerja: string;
   tanggalPerolehan: string;
   nilaiPerolehan: number;
   kondisi: KondisiAset;
   status: StatusAset;
   penanggungJawab: string;
+  catatan: string | null;
 }
 
 export interface AktivitasItem {

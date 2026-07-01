@@ -48,13 +48,16 @@ export async function getAsetList(supabase: TypedClient): Promise<Aset[]> {
     kode: row.kode,
     nama: row.nama,
     kategori: (row.kategori_id && kategoriMap.get(row.kategori_id)) || "Tanpa Kategori",
+    kategoriId: row.kategori_id,
     lokasi: (row.lokasi_id && lokasiMap.get(row.lokasi_id)) || "Tanpa Lokasi",
+    lokasiId: row.lokasi_id,
     unitKerja: row.unit_kerja || "-",
     tanggalPerolehan: row.tanggal_perolehan,
     nilaiPerolehan: Number(row.nilai_perolehan),
     kondisi: row.kondisi,
     status: row.status,
     penanggungJawab: row.penanggung_jawab || "-",
+    catatan: row.catatan,
   }));
 }
 
